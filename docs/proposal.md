@@ -23,9 +23,9 @@ A more in-depth look at bidding is as follows:
 
 ## Summary 
 
-We will be using DeepMind's [OpenSpiel](https://github.com/deepmind/open_spiel) as a starter for the environment. Our agent should be able to output a bid based on previous bids and knowledge of its current hand. 
+Our goal is to create an intelligent Bridge bidding agent. We will be using DeepMind's [OpenSpiel](https://github.com/deepmind/open_spiel) as a starter for the environment. Our agent should be able to output a bid based on previous bids and knowledge of its current hand. 
 
-Our goal is to be able to test and implement algorithms that are able to perform well in imperfect information, zero-sum, and collaborative games, of which Bridge is a unique game that fills all of these criteria. 
+At the moment, we intend to build an agent that functions as a single player (Bridge is played in teams of 2). Depending on progress, we may attempt to incorporate human bidding conventions.
 
 ## Algorithms 
 
