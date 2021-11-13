@@ -3,3 +3,9 @@ _site/
 .jekyll-metadata
 **/.DS_Store
 **/.vscode
+.idea
+lightning_logs/
+**/logs
+**/data
+**/__pycache__/**
+**/.ipynb_checkpoints/**
