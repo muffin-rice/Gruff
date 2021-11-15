@@ -58,7 +58,7 @@ class BridgeSupervised(pl.LightningModule):
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
-
+        
         self.save_hyperparameters()
 
     def forward(self, x):

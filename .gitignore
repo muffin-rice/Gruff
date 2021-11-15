@@ -5,6 +5,7 @@ _site/
 **/.vscode
 .idea
 lightning_logs/
+**/logs
 **/data
 **/__pycache__/**
 **/.ipynb_checkpoints/**
