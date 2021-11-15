@@ -4,4 +4,7 @@ _site/
 **/.DS_Store
 **/.vscode
 .idea
+lightning_logs/
 **/data
+**/__pycache__/**
+**/.ipynb_checkpoints/**
