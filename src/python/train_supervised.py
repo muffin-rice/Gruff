@@ -24,14 +24,14 @@ def train(batch_size, epochs):
                                  filename='bridge-supervised-{epoch}')
     
     logger = TensorBoardLogger(logs_dir, 
-                               name='supervised',
-                               log_graph=True)
+                               name='supervised')
     
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=torch.cuda.device_count(),
+                         gpus=[1],
                          callbacks=[model_ckpt],
-                         accelerator='ddp',
+                         strategy='ddp',
                          logger=logger,
+                         num_sanity_val_steps=0,
                          progress_bar_refresh_rate=None)
     
     trainer.fit(model=model,
