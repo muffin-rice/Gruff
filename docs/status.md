@@ -3,6 +3,9 @@ layout: default
 title:  Status
 ---
 
+<iframe width="420" height="315" src="https://www.youtube.com/watch/njgHEeXTPj4" frameborder="0" allowfullscreen allowsameorigin></iframe>
+
+
 ## Project Summary: 
 
 Our goal is to create an intelligent Bridge bidding agent. 
@@ -17,7 +20,7 @@ Depending on progress, we may attempt to incorporate human bidding conventions.
 
 ## Approach 
 For the supervised learning portion, we used an Adam Optimizer with a learning rate of 
-1e-4 and Cross Entropy Loss: 
+$10^{-4}$ and Cross Entropy Loss: 
 
 ![Adam Optimizer](images/adam_optimizer.png)
 
