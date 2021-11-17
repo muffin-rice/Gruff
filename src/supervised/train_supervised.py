@@ -8,11 +8,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from BridgeNetwork import BridgeSupervised
 from BridgeDataModule import BridgeDataModule
 
-data_dir = '../data'
-logs_dir = '../logs'
 
-
-def train(batch_size, epochs):
+def train(batch_size, epochs, data_dir, logs_dir):
     
     pl.utilities.seed.seed_everything(seed=0, workers=torch.cuda.is_available())
     
@@ -38,11 +35,18 @@ def train(batch_size, epochs):
                 datamodule=BridgeDataModule(data_dir=data_dir, batch_size=batch_size))
     
     
-    
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Supervised training for Bridge.')
     
+    parser.add_argument(
+        '--datadir', default='../data', help='path to data files'
+    )
+
+    parser.add_argument(
+        '--logdir', default='../logs', help='path to log files (checkpoint stored here)'
+    )
+
     parser.add_argument(
         '-b', '--batchsize', default=32, help='batchsize', type=int
     )
@@ -53,7 +57,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    train(args.batchsize, args.epochs)
+    train(args.batchsize, args.epochs, args.datadir, args.logdir)
     
     
 
