@@ -16,6 +16,10 @@ A more in-depth look at bidding is as follows:
 
 “The bidding phase of Contract Bridge is like Mini-Bridge but with a much larger state space (each player now holds a hand with 13 cards from 4 suits). Unlike Mini-Bridge, a player has both her teammate and competitors, making it more than a full-collaborative IG. Therefore, multiple trade-offs needs to be considered. Human handcrafted conventions to signal private hands, called bidding systems. For example, opening bid 2♥ used to signal a very strong hand with hearts historically, but now signals a weak hand with long hearts. Its current usage blocks opponents from getting their best contract, which happens more frequently than its previous usage (to build a strong heart contract).” [Tian et al., 2020](https://arxiv.org/pdf/2008.06495.pdf)
 
+## What is Gruff? 
+Gruff is the name of the troll under the bridge in the folktale *The Three Billy Goats Gruff*. 
+
+Here, it is a Neural Network that outputs a bid given the game state, which includes their current hand and all of the previous bids. 
 
 [Source code](https://github.com/muffin-rice/Gruff)
 
