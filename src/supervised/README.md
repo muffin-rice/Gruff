@@ -13,9 +13,10 @@ Run script in desired location with
 python train_supervised.py 
 --data-dir [DATA_DIR] 
 --log-dir [LOG_DIR]
---checkpoint-dir [CHECKPOINT_DIR]...
+--batchsize (-b) [BATCHSIZE]
+--epochs (-e) [EPOCHS]
 ```
 
 ## 3. 
 
-Checkpoints are stored for the model in CHECKPOINT_DIR
+Checkpoints are stored for the model in CHECKPOINT_DIR. Each run is versioned automatically by Lightning.
