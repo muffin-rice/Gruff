@@ -48,7 +48,7 @@ class BridgeDataset(Dataset):
         obs = torch.tensor(state.observation_tensor())
         labels = torch.tensor(traj[action_index]) - MIN_ACTION
 
-        return {'observation' : obs, 'labels' : labels}
+        return {'observation' : obs, 'labels' : labels, 'traj': traj}
 
 
 class BridgeDataModule(pl.LightningDataModule):
@@ -65,21 +65,21 @@ class BridgeDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['train']),
                           shuffle=True,
-                          prefetch_factor=2056*4,
-                          batch_size=self.batch_size,
-                          num_workers=12 if torch.cuda.is_available() else 0)
+#                           prefetch_factor=2056*4,
+                          batch_size=self.batch_size,)
+#                           num_workers=12 if torch.cuda.is_available() else 0)
 
     def val_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['valid']),
-                          prefetch_factor=2056*4,
-                          batch_size=self.batch_size,
-                          num_workers=12 if torch.cuda.is_available() else 0)
+#                           prefetch_factor=2056*4,
+                          batch_size=self.batch_size,)
+#                           num_workers=12 if torch.cuda.is_available() else 0)
 
     def test_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['test']),
-                          prefetch_factor=2056*4,
-                          batch_size=self.batch_size,
-                          num_workers=12 if torch.cuda.is_available() else 0)
+#                           prefetch_factor=2056*4,
+                          batch_size=self.batch_size,)
+#                           num_workers=12 if torch.cuda.is_available() else 0)
 
     def teardown(self, stage: Optional[str] = None) -> None:
         pass

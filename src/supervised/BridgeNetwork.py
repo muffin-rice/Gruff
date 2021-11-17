@@ -67,7 +67,7 @@ class BridgeSupervised(pl.LightningModule):
         '''
         x = self.backbone(x)
         x = F.softmax(self.out(x), dim=1)
-        return x + MIN_ACTION
+        return x.argmax(dim=1)
     
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=1e-4)
