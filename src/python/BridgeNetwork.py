@@ -89,3 +89,87 @@ class BridgeSupervised(pl.LightningModule):
         metrics = self.metrics_fn(yhat.detach().argmax(dim=1), y.detach())
 
         return {'loss' : loss, **metrics}
+
+
+class BridgeCritic(BridgeSupervised): # learns the Value of a given state (discounted total reward)
+    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
+        super().__init__(input_dim, inner_dim, num_blocks)
+        self.critic_out = nn.Linear(NUM_ACTIONS, 1)
+        self.loss_fn = nn.MSELoss()
+        self.metrics_fn = lambda yhat,y: {'r2' :1 - ((y - yhat)^2).sum()/((y - y.mean())^2).sum() }
+
+    def forward(self, x):
+        '''
+        Outputs single value
+        '''
+        x = self.backbone(x)
+        x = self.out(x)
+        x = self.critic_out(x)
+        return x
+    
+    def configure_optimizers(self):
+        return optim.Adam(self.parameters(), lr=1e-4)
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels']
+        yhat = self.forward(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat, y)
+
+        return {'loss' : loss, **metrics}
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels']
+        yhat = self.forward(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat.detach(), y.detach())
+
+        return {'loss' : loss, **metrics}
+
+class BridgeActor(BridgeSupervised): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
+    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
+        super().__init__(input_dim, inner_dim, num_blocks)
+        self.loss_fn = nn.MSELoss()
+    
+    def configure_optimizers(self):
+        return optim.Adam(self.parameters(), lr=1e-4)
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels']
+        yhat = self.forward(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat, y)
+
+        return {'loss' : loss, **metrics}
+
+    def validation_step(self, batch, batch_idx):
+        x, action, advantage = batch['observation'], batch['action'], batch['advantage']
+        yhat = self.forward(x)
+
+
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat.detach(), y.detach())
+
+        return {'loss' : loss, **metrics}
+
+
+class BridgeActorCritic(pl.LightningModule):
+    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
+        super().__init__()
+        self.actor = BridgeActor(input_dim, inner_dim, num_blocks)
+        self.critic = BridgeCritic(input_dim, inner_dim, num_blocks)
+    
+    def configure_optimizers(self):
+        return optim.Adam(self.parameters(), lr=1e-4)
+ 
+    def forward(self, x):
+        '''
+        Outputs value, policy_distribution
+        '''
+        value = self.critic.forward(x)
+        policy_dist = self.actor.forward(x)
+        return value, policy_dist
