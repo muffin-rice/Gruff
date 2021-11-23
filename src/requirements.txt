@@ -1,0 +1,8 @@
+open_spiel
+torch
+pytorch-lightning
+numpy
+matplotlib
+pandas
+jupyter
+jupyterlab
