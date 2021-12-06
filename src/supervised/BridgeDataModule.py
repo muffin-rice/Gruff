@@ -35,18 +35,18 @@ class BridgeDataset(Dataset):
         return len(self.all_trajectories)
 
     def __getitem__(self, idx):
+        traj = np.zeros(90, dtype = np.int32)
+        idtraj = self.all_trajectories[idx]
+        traj[:len(idtraj)] = idtraj
 
-#         obs = np.zeros([1,] + GAME.observation_tensor_shape(), np.float32)
-#         labels = np.zeros([1,], dtype=np.int32)
-
-        traj = self.all_trajectories[idx]
         state = GAME.new_initial_state()
         action_index = np.random.randint(52, len(self.all_trajectories[idx]))
         for action in traj[:action_index]:
             state.apply_action(action)
 
         obs = torch.tensor(state.observation_tensor())
-        labels = torch.tensor(traj[action_index]) - MIN_ACTION
+        labels = torch.tensor(traj[action_index], dtype = torch.long) - MIN_ACTION 
+        traj = torch.tensor(traj)
 
         return {'observation' : obs, 'labels' : labels, 'traj': traj}
 
@@ -65,21 +65,21 @@ class BridgeDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['train']),
                           shuffle=True,
-#                           prefetch_factor=2056*4,
-                          batch_size=self.batch_size,)
-#                           num_workers=12 if torch.cuda.is_available() else 0)
+                          prefetch_factor=2056*4,
+                          batch_size=self.batch_size,
+                          num_workers=12 if torch.cuda.is_available() else 0)
 
     def val_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['valid']),
-#                           prefetch_factor=2056*4,
-                          batch_size=self.batch_size,)
-#                           num_workers=12 if torch.cuda.is_available() else 0)
+                          prefetch_factor=2056*4,
+                          batch_size=self.batch_size,
+                          num_workers=12 if torch.cuda.is_available() else 0)
 
     def test_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['test']),
-#                           prefetch_factor=2056*4,
-                          batch_size=self.batch_size,)
-#                           num_workers=12 if torch.cuda.is_available() else 0)
+                          prefetch_factor=2056*4,
+                          batch_size=self.batch_size,
+                          num_workers=12 if torch.cuda.is_available() else 0)
 
     def teardown(self, stage: Optional[str] = None) -> None:
         pass

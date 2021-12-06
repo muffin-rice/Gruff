@@ -8,6 +8,26 @@ import torch.nn.functional as F
 NUM_ACTIONS = 38 #89 - 52 + 1
 MIN_ACTION = 52
 
+class BaseModel(nn.Module): 
+    #base model in samples/bridge_supervised_learning
+    def __init__(self, dim, num_fc = 4): 
+        super().__init__()
+
+        self.dim = dim 
+        self.fcs = []
+        self.fc1 = nn.Linear(571, 1024)
+        for i in range(num_fc-1): 
+            self.fcs.append(nn.Linear(1024, 1024))
+        
+    def forward(self, x): 
+        x = self.fc1(x) 
+        for layer in self.fcs: 
+            x = nn.relu(x) 
+            x = layer(x) 
+
+        x = nn.relu(x)
+
+
 class RFC(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -60,21 +80,24 @@ class BridgeSupervised(pl.LightningModule):
         
         self.save_hyperparameters()
 
+    def forward_half(self, x): 
+        '''outputs probabilities'''
+        return self.out(self.backbone(x))
+
     def forward(self, x):
         '''
         Outputs one-hot encoding of action.
         Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
         '''
-        x = self.backbone(x)
-        x = F.softmax(self.out(x), dim=1)
-        return x.argmax(dim=1)
+        x = F.softmax(self.forward_half(x))
+        return x.argmax(dim=1) + MIN_ACTION
     
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=1e-4)
 
     def training_step(self, batch, batch_idx):
         x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+        yhat = self.forward_half(x)
 
         loss = self.loss_fn(yhat, y)
         metrics = self.metrics_fn(yhat.argmax(dim=1), y)
@@ -82,8 +105,8 @@ class BridgeSupervised(pl.LightningModule):
         return {'loss' : loss, **metrics}
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+        x, y = batch['observation'], batch['labels'] - MIN_ACTION
+        yhat = self.forward_half(x)
 
         loss = self.loss_fn(yhat, y)
         metrics = self.metrics_fn(yhat.detach().argmax(dim=1), y.detach())
