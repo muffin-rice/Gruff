@@ -14,18 +14,18 @@ def train(batch_size, epochs, data_dir, logs_dir):
     
     pl.utilities.seed.seed_everything(seed=0, workers=torch.cuda.is_available())
     
-    model = BridgeBase()
+    model = BridgeSupervised()
     
     # checkpointing
     model_ckpt = ModelCheckpoint(every_n_epochs=1,
                                  save_top_k=-1,
-                                 filename='bridge-supervised-{epoch}')
+                                 filename='bridge-base-{epoch}')
     
     logger = TensorBoardLogger(logs_dir, 
-                               name='supervised')
+                               name='base')
     
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=[1],
+                         gpus=-1,
                          callbacks=[model_ckpt],
                          strategy=DDPPlugin(find_unused_parameters=False),
                          logger=logger,
@@ -36,7 +36,7 @@ def train(batch_size, epochs, data_dir, logs_dir):
                 datamodule=BridgeDataModule(data_dir=data_dir, 
                                             batch_size=batch_size,
                                             prefetch=2**14,
-                                            workers=16))
+                                            workers=26))
     
     
 if __name__ == '__main__':

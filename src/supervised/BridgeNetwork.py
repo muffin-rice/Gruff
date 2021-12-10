@@ -68,6 +68,53 @@ class RFCBackbone(pl.LightningModule):
         return x2 #return the latent dimension, final predict values come later
 
 
+class BridgeBase(pl.LightningModule):
+    def __init__(self):
+        super().__init__()
+        self.base = BaseModel()
+        self.out = nn.Linear(1024, NUM_ACTIONS)
+        
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
+        
+        self.save_hyperparameters()
+        
+    
+    def forward_half(self,x):
+        '''Outputs probabilities'''
+        x = self.base(x)
+        x = self.out(x)
+        return x
+    
+    def forward(self, x):
+        '''
+        Outputs one-hot encoding of action.
+        Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
+        '''
+        x = F.softmax(self.forward_half(x))
+        return x.argmax(dim=1) + MIN_ACTION
+
+    def configure_optimizers(self):
+        return optim.Adam(self.parameters(), lr=1e-4)
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels']
+        yhat = self.forward_half(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat.argmax(dim=1), y)
+
+        return {'loss' : loss, **metrics}
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels'] - MIN_ACTION
+        yhat = self.forward_half(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat.detach().argmax(dim=1), y.detach())
+
+        return {'loss' : loss, **metrics}
+
 class BridgeSupervised(pl.LightningModule):
     def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__()
