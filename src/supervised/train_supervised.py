@@ -4,6 +4,7 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.plugins import DDPPlugin
 
 from BridgeNetwork import BridgeSupervised
 from BridgeDataModule import BridgeDataModule
@@ -24,15 +25,18 @@ def train(batch_size, epochs, data_dir, logs_dir):
                                name='supervised')
     
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=[1],
+                         gpus=-1,
                          callbacks=[model_ckpt],
-                         strategy='ddp',
+                         strategy=DDPPlugin(find_unused_parameters=False),
                          logger=logger,
                          num_sanity_val_steps=0,
                          progress_bar_refresh_rate=None)
     
     trainer.fit(model=model,
-                datamodule=BridgeDataModule(data_dir=data_dir, batch_size=batch_size))
+                datamodule=BridgeDataModule(data_dir=data_dir, 
+                                            batch_size=batch_size,
+                                            prefetch=2**14,
+                                            workers=26))
     
     
 if __name__ == '__main__':

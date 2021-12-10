@@ -10,22 +10,22 @@ MIN_ACTION = 52
 
 class BaseModel(nn.Module): 
     #base model in samples/bridge_supervised_learning
-    def __init__(self, dim, num_fc = 4): 
+    def __init__(self, dim, num_fc = 4):
         super().__init__()
 
-        self.dim = dim 
-        self.fcs = []
-        self.fc1 = nn.Linear(571, 1024)
-        for i in range(num_fc-1): 
-            self.fcs.append(nn.Linear(1024, 1024))
+        # self.dim = dim 
+        self.fc1 = nn.Linear(dim, 1024)
+        self.fcs = nn.Sequential(*[nn.Linear(1024, 1024) for i in range(num_fc-1)])
+            
         
     def forward(self, x): 
         x = self.fc1(x) 
         for layer in self.fcs: 
-            x = nn.relu(x) 
+            x = F.relu(x) 
             x = layer(x) 
 
-        x = nn.relu(x)
+        x = F.relu(x)
+        return x
 
 
 class RFC(nn.Module):
@@ -73,7 +73,8 @@ class BridgeSupervised(pl.LightningModule):
         super().__init__()
         self.inner_dim = inner_dim
         self.backbone = RFCBackbone(input_dim, inner_dim, num_blocks)
-        self.out = nn.Linear(inner_dim, NUM_ACTIONS)
+        self.head = BaseModel(inner_dim)
+        self.out = nn.Linear(1024, NUM_ACTIONS)
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
@@ -82,7 +83,10 @@ class BridgeSupervised(pl.LightningModule):
 
     def forward_half(self, x): 
         '''outputs probabilities'''
-        return self.out(self.backbone(x))
+        x = self.backbone(x)
+        x = self.head(x)
+        x = self.out(x)
+        return x
 
     def forward(self, x):
         '''

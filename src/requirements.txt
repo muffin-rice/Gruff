@@ -1,5 +1,6 @@
 open_spiel
-torch
+-f https://download.pytorch.org/whl/torch_stable.html
+torch==1.8.0+cu111
 pytorch-lightning
 numpy
 matplotlib

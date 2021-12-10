@@ -52,10 +52,12 @@ class BridgeDataset(Dataset):
 
 
 class BridgeDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str = "./", batch_size : int = 32):
+    def __init__(self, data_dir: str = "./", batch_size : int = 32, prefetch: int = 4, workers: int = 0):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.prefetch = prefetch
+        self.workers = workers if torch.cuda.is_available() else 0
         self.bridge_paths = {}
 
     def setup(self, stage: Optional[str] = None):
@@ -65,21 +67,21 @@ class BridgeDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['train']),
                           shuffle=True,
-                          prefetch_factor=2056*4,
+                          prefetch_factor=self.prefetch,
                           batch_size=self.batch_size,
-                          num_workers=12 if torch.cuda.is_available() else 0)
+                          num_workers=self.workers)
 
     def val_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['valid']),
-                          prefetch_factor=2056*4,
+                          prefetch_factor=self.prefetch,
                           batch_size=self.batch_size,
-                          num_workers=12 if torch.cuda.is_available() else 0)
+                          num_workers=self.workers)
 
     def test_dataloader(self):
         return DataLoader(BridgeDataset(self.bridge_paths['test']),
-                          prefetch_factor=2056*4,
+                          prefetch_factor=self.prefetch,
                           batch_size=self.batch_size,
-                          num_workers=12 if torch.cuda.is_available() else 0)
+                          num_workers=self.workers)
 
     def teardown(self, stage: Optional[str] = None) -> None:
         pass
