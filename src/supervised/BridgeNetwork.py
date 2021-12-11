@@ -71,13 +71,13 @@ class RFCBackbone(pl.LightningModule):
 class BridgeBase(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.base = BaseModel()
+        self.base = BaseModel(571)
         self.out = nn.Linear(1024, NUM_ACTIONS)
         
         self.loss_fn = nn.CrossEntropyLoss()
         self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
         
-        self.save_hyperparameters()
+        # self.save_hyperparameters()
         
     
     def forward_half(self,x):
@@ -107,7 +107,7 @@ class BridgeBase(pl.LightningModule):
         return {'loss' : loss, **metrics}
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels'] - MIN_ACTION
+        x, y = batch['observation'], batch['labels']
         yhat = self.forward_half(x)
 
         loss = self.loss_fn(yhat, y)
@@ -156,7 +156,7 @@ class BridgeSupervised(pl.LightningModule):
         return {'loss' : loss, **metrics}
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels'] - MIN_ACTION
+        x, y = batch['observation'], batch['labels']
         yhat = self.forward_half(x)
 
         loss = self.loss_fn(yhat, y)

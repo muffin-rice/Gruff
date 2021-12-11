@@ -6,7 +6,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.plugins import DDPPlugin
 
-from BridgeNetwork import BridgeSupervised
+from BridgeNetwork import BridgeBase
 from BridgeDataModule import BridgeDataModule
 
 
@@ -14,7 +14,7 @@ def train(batch_size, epochs, data_dir, logs_dir):
     
     pl.utilities.seed.seed_everything(seed=0, workers=torch.cuda.is_available())
     
-    model = BridgeSupervised()
+    model = BridgeBase()
     
     # checkpointing
     model_ckpt = ModelCheckpoint(every_n_epochs=1,
@@ -25,7 +25,7 @@ def train(batch_size, epochs, data_dir, logs_dir):
                                name='base')
     
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=-1,
+                         gpus=[1],
                          callbacks=[model_ckpt],
                          strategy=DDPPlugin(find_unused_parameters=False),
                          logger=logger,
@@ -35,8 +35,8 @@ def train(batch_size, epochs, data_dir, logs_dir):
     trainer.fit(model=model,
                 datamodule=BridgeDataModule(data_dir=data_dir, 
                                             batch_size=batch_size,
-                                            prefetch=2**14,
-                                            workers=26))
+                                            prefetch=2**12,
+                                            workers=12))
     
     
 if __name__ == '__main__':

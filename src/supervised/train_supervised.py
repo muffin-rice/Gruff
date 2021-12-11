@@ -14,7 +14,7 @@ def train(batch_size, epochs, data_dir, logs_dir):
     
     pl.utilities.seed.seed_everything(seed=0, workers=torch.cuda.is_available())
     
-    model = BridgeBase()
+    model = BridgeSupervised()
     
     # checkpointing
     model_ckpt = ModelCheckpoint(every_n_epochs=1,
@@ -25,18 +25,21 @@ def train(batch_size, epochs, data_dir, logs_dir):
                                name='supervised')
     
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=[1],
+                         gpus=-1,
                          callbacks=[model_ckpt],
                          strategy=DDPPlugin(find_unused_parameters=False),
                          logger=logger,
                          num_sanity_val_steps=0,
                          progress_bar_refresh_rate=None)
     
-    trainer.fit(model=model,
-                datamodule=BridgeDataModule(data_dir=data_dir, 
-                                            batch_size=batch_size,
-                                            prefetch=2**14,
-                                            workers=16))
+    try:
+        trainer.fit(model=model,
+                    datamodule=BridgeDataModule(data_dir=data_dir, 
+                                                batch_size=batch_size,
+                                                prefetch=2**12,
+                                                workers=16))
+    except:
+        trainer.save_checkpoint('crash.ckpt')
     
     
 if __name__ == '__main__':
