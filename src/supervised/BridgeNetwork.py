@@ -120,8 +120,7 @@ class BridgeSupervised(pl.LightningModule):
         super().__init__()
         self.inner_dim = inner_dim
         self.backbone = RFCBackbone(input_dim, inner_dim, num_blocks)
-        self.head = BaseModel(inner_dim)
-        self.out = nn.Linear(1024, NUM_ACTIONS)
+        self.out = nn.Linear(inner_dim, NUM_ACTIONS)
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
@@ -131,7 +130,6 @@ class BridgeSupervised(pl.LightningModule):
     def forward_half(self, x): 
         '''outputs probabilities'''
         x = self.backbone(x)
-        x = self.head(x)
         x = self.out(x)
         return x
 

@@ -14,7 +14,7 @@ def train(batch_size, epochs, data_dir, logs_dir):
     
     pl.utilities.seed.seed_everything(seed=0, workers=torch.cuda.is_available())
     
-    model = BridgeSupervised()
+    model = BridgeSupervised(inner_dim=1024)
     
     # checkpointing
     model_ckpt = ModelCheckpoint(every_n_epochs=1,
