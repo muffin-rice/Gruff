@@ -69,15 +69,15 @@ class RFCBackbone(pl.LightningModule):
 
 
 class BridgeBase(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, input_dim = 571, inner_dim = 1024, num_fc = 4):
         super().__init__()
-        self.base = BaseModel(571)
-        self.out = nn.Linear(1024, NUM_ACTIONS)
+        self.base = BaseModel(input_dim, num_fc)
+        self.out = nn.Linear(inner_dim, NUM_ACTIONS)
         
         self.loss_fn = nn.CrossEntropyLoss()
         self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
         
-        # self.save_hyperparameters()
+        self.save_hyperparameters()
         
     
     def forward_half(self,x):
