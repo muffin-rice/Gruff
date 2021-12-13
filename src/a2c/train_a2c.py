@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 import pytorch_lightning as pl
 
-from supervised.BridgeNetwork import *
+from BridgeNetwork import *
 
 NUM_ACTIONS = 38
 BATCH_SIZE = 128
@@ -75,6 +75,10 @@ class BridgeActor(BridgeBase): # learns the optimal policy fn ( optimal f(action
         self.load_state_dict(torch.load(file_dir)['state_dict'])
         self.loss_fn = nn.MSELoss()
     
+    def forward(self, x): 
+        half = F.softmax(self.forward_half(x), dim=1)
+        return half
+
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=1e-4)
 
@@ -176,7 +180,6 @@ class BridgeEnv(gym.Env):
 
         return action
 
-
     def softmax(self, x):
         y = np.exp(x - np.max(x))
         f_x = y / np.sum(y)
@@ -242,7 +245,15 @@ def main(num_episodes : int, pretrained_model : str):
         state = env.reset()
         state = torch.from_numpy(state).to(device).float().unsqueeze(0)
         for t in count():
-            value, policy_dist = actor_critic.forward(state)
+            # TODO
+            while True: 
+                value, policy_dist = actor_critic.forward(state)
+                if torch.any(torch.isnan(policy_dist)): 
+                    #print(state)
+                    state = env.reset() 
+                    state = torch.from_numpy(state).to(device).float().unsqueeze(0)
+                    continue
+                break
 
             value = value.detach().numpy()[0,0]
             dist = policy_dist.detach().squeeze().numpy()
@@ -288,6 +299,7 @@ def main(num_episodes : int, pretrained_model : str):
         actor_loss =  (-log_probs * advantage).mean()
         critic_loss = 0.5 * advantage.pow(2).mean()
         ac_loss = actor_loss + critic_loss
+        print(ac_loss)
 
         optimizer.zero_grad()
         ac_loss.backward()

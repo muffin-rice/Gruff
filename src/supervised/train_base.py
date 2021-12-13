@@ -35,7 +35,7 @@ def train(batch_size, epochs, data_dir, logs_dir):
     trainer.fit(model=model,
                 datamodule=BridgeDataModule(data_dir=data_dir, 
                                             batch_size=batch_size,
-                                            prefetch=2**12,
+                                            prefetch=2**8,
                                             workers=12))
     
     
