@@ -8,6 +8,26 @@ import torch.nn.functional as F
 NUM_ACTIONS = 38 #89 - 52 + 1
 MIN_ACTION = 52
 
+class BaseModel(nn.Module): 
+    #base model in samples/bridge_supervised_learning
+    def __init__(self, dim, num_fc = 4):
+        super().__init__()
+
+        # self.dim = dim 
+        self.fc1 = nn.Linear(dim, 1024)
+        self.fcs = nn.Sequential(*[nn.Linear(1024, 1024) for i in range(num_fc-1)])
+            
+        
+    def forward(self, x): 
+        x = self.fc1(x) 
+        for layer in self.fcs: 
+            x = F.relu(x) 
+            x = layer(x) 
+
+        x = F.relu(x)
+        return x
+
+
 class RFC(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -48,33 +68,38 @@ class RFCBackbone(pl.LightningModule):
         return x2 #return the latent dimension, final predict values come later
 
 
-class BridgeSupervised(pl.LightningModule):
-    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
+class BridgeBase(pl.LightningModule):
+    def __init__(self):
         super().__init__()
-        self.inner_dim = inner_dim
-        self.backbone = RFCBackbone(input_dim, inner_dim, num_blocks)
-        self.out = nn.Linear(inner_dim, NUM_ACTIONS)
-
+        self.base = BaseModel(571)
+        self.out = nn.Linear(1024, NUM_ACTIONS)
+        
         self.loss_fn = nn.CrossEntropyLoss()
         self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
         
-        self.save_hyperparameters()
-
+        # self.save_hyperparameters()
+        
+    
+    def forward_half(self,x):
+        '''Outputs probabilities'''
+        x = self.base(x)
+        x = self.out(x)
+        return x
+    
     def forward(self, x):
         '''
         Outputs one-hot encoding of action.
         Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
         '''
-        x = self.backbone(x)
-        x = F.softmax(self.out(x), dim=1)
-        return x + MIN_ACTION
-    
+        x = F.softmax(self.forward_half(x))
+        return x.argmax(dim=1) + MIN_ACTION
+
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=1e-4)
 
     def training_step(self, batch, batch_idx):
         x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+        yhat = self.forward_half(x)
 
         loss = self.loss_fn(yhat, y)
         metrics = self.metrics_fn(yhat.argmax(dim=1), y)
@@ -83,93 +108,58 @@ class BridgeSupervised(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+        yhat = self.forward_half(x)
 
         loss = self.loss_fn(yhat, y)
         metrics = self.metrics_fn(yhat.detach().argmax(dim=1), y.detach())
 
         return {'loss' : loss, **metrics}
 
-
-class BridgeCritic(BridgeSupervised): # learns the Value of a given state (discounted total reward)
-    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
-        super().__init__(input_dim, inner_dim, num_blocks)
-        self.critic_out = nn.Linear(NUM_ACTIONS, 1)
-        self.loss_fn = nn.MSELoss()
-        self.metrics_fn = lambda yhat,y: {'r2' :1 - ((y - yhat)^2).sum()/((y - y.mean())^2).sum() }
-
-    def forward(self, x):
-        '''
-        Outputs single value
-        '''
-        x = self.backbone(x)
-        x = self.out(x)
-        x = self.critic_out(x)
-        return x
-    
-    def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=1e-4)
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
-
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat, y)
-
-        return {'loss' : loss, **metrics}
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
-
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat.detach(), y.detach())
-
-        return {'loss' : loss, **metrics}
-
-class BridgeActor(BridgeSupervised): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
-    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
-        super().__init__(input_dim, inner_dim, num_blocks)
-        self.loss_fn = nn.MSELoss()
-    
-    def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=1e-4)
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
-
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat, y)
-
-        return {'loss' : loss, **metrics}
-
-    def validation_step(self, batch, batch_idx):
-        x, action, advantage = batch['observation'], batch['action'], batch['advantage']
-        yhat = self.forward(x)
-
-
-
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat.detach(), y.detach())
-
-        return {'loss' : loss, **metrics}
-
-
-class BridgeActorCritic(pl.LightningModule):
+class BridgeSupervised(pl.LightningModule):
     def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__()
-        self.actor = BridgeActor(input_dim, inner_dim, num_blocks)
-        self.critic = BridgeCritic(input_dim, inner_dim, num_blocks)
+        self.inner_dim = inner_dim
+        self.backbone = RFCBackbone(input_dim, inner_dim, num_blocks)
+        self.head = BaseModel(inner_dim)
+        self.out = nn.Linear(1024, NUM_ACTIONS)
+
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
+        
+        self.save_hyperparameters()
+
+    def forward_half(self, x): 
+        '''outputs probabilities'''
+        x = self.backbone(x)
+        x = self.head(x)
+        x = self.out(x)
+        return x
+
+    def forward(self, x):
+        '''
+        Outputs one-hot encoding of action.
+        Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
+        '''
+        x = F.softmax(self.forward_half(x))
+        return x.argmax(dim=1) + MIN_ACTION
     
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=1e-4)
- 
-    def forward(self, x):
-        '''
-        Outputs value, policy_distribution
-        '''
-        value = self.critic.forward(x)
-        policy_dist = self.actor.forward(x)
-        return value, policy_dist
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels']
+        yhat = self.forward_half(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat.argmax(dim=1), y)
+
+        return {'loss' : loss, **metrics}
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch['observation'], batch['labels']
+        yhat = self.forward_half(x)
+
+        loss = self.loss_fn(yhat, y)
+        metrics = self.metrics_fn(yhat.detach().argmax(dim=1), y.detach())
+
+        return {'loss' : loss, **metrics}
