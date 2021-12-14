@@ -58,8 +58,6 @@ class BridgeActorCritic(pl.LightningModule):
             action = metadata['action']
             log_prob = torch.max(dist[action].log(), torch.tensor(1e-8))
             entropy = -(dist.mean() * dist.log()).sum()
-            
-            print(log_prob)
 
             rewards.append(reward)
             values.append(value)
@@ -108,9 +106,10 @@ class BridgeActorCritic(pl.LightningModule):
         advantage = Qvals - values
         actor_loss =  (-log_probs * advantage).mean()
         critic_loss = (0.5 * advantage * advantage).mean()
-        print('aloss', actor_loss)
-        print('closs', critic_loss)
         ac_loss = actor_loss + critic_loss
+        # if ac_loss.item() == float('inf'):
+        # print('aloss', actor_loss)
+        # print('closs', critic_loss)
         
         self.log('loss', ac_loss,
                  on_step=False,
@@ -121,7 +120,8 @@ class BridgeActorCritic(pl.LightningModule):
         return { 'loss': ac_loss }
         
             
-class BridgeCritic(BridgeBase): # learns the Value of a given state (discounted total reward)
+# class BridgeCritic(BridgeSupervised): # learns the Value of a given state (discounted total reward)
+class BridgeCritic(BridgeBase):
     def __init__(self, file_dir, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__(input_dim, inner_dim, num_blocks)
         self.load_state_dict(torch.load(file_dir)['state_dict'])
@@ -137,55 +137,55 @@ class BridgeCritic(BridgeBase): # learns the Value of a given state (discounted 
         x = self.critic_out(x)
         return x
     
-    def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=1e-4)
+#     def configure_optimizers(self):
+#         return optim.Adam(self.parameters(), lr=1e-4)
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+#     def training_step(self, batch, batch_idx):
+#         x, y = batch['observation'], batch['labels']
+#         yhat = self.forward(x)
 
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat, y)
+#         loss = self.loss_fn(yhat, y)
+#         metrics = self.metrics_fn(yhat, y)
 
-        return {'loss' : loss, **metrics}
+#         return {'loss' : loss, **metrics}
 
-    def validation_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+#     def validation_step(self, batch, batch_idx):
+#         x, y = batch['observation'], batch['labels']
+#         yhat = self.forward(x)
 
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat.detach(), y.detach())
+#         loss = self.loss_fn(yhat, y)
+#         metrics = self.metrics_fn(yhat.detach(), y.detach())
 
-        return {'loss' : loss, **metrics}
+#         return {'loss' : loss, **metrics}
 
+# class BridgeActor(BridgeSupervised): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
 class BridgeActor(BridgeBase): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
-# class BridgeActor(BridgeBase): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
     def __init__(self, file_dir, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__(input_dim, inner_dim, num_blocks)
         self.load_state_dict(torch.load(file_dir)['state_dict'])
         self.loss_fn = nn.MSELoss()
     
-    def forward(self, x): 
-        half = F.softmax(self.forward_half(x), dim=1)
+    def forward(self, x):
+        half = F.softmax(self.forward_half(x), dim=0)
         return half
 
-    def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=1e-4)
+#     def configure_optimizers(self):
+#         return optim.Adam(self.parameters(), lr=1e-4)
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch['observation'], batch['labels']
-        yhat = self.forward(x)
+#     def training_step(self, batch, batch_idx):
+#         x, y = batch['observation'], batch['labels']
+#         yhat = self.forward(x)
 
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat, y)
+#         loss = self.loss_fn(yhat, y)
+#         metrics = self.metrics_fn(yhat, y)
 
-        return {'loss' : loss, **metrics}
+#         return {'loss' : loss, **metrics}
 
-    def validation_step(self, batch, batch_idx):
-        x, action, advantage = batch['observation'], batch['action'], batch['advantage']
-        yhat = self.forward(x)
+#     def validation_step(self, batch, batch_idx):
+#         x, action, advantage = batch['observation'], batch['action'], batch['advantage']
+#         yhat = self.forward(x)
         
-        loss = self.loss_fn(yhat, y)
-        metrics = self.metrics_fn(yhat.detach(), y.detach())
+#         loss = self.loss_fn(yhat, y)
+#         metrics = self.metrics_fn(yhat.detach(), y.detach())
 
-        return {'loss' : loss, **metrics}
+#         return {'loss' : loss, **metrics}

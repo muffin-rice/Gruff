@@ -10,6 +10,7 @@ class Agent:
     def __init__(self):
         self.env = BridgeEnv()
         self.state = self.env.reset()
+        self.fail_thresh = 10
         
     def play_step(self, net, device):
         
@@ -18,9 +19,12 @@ class Agent:
         else:
             state = self.state
         
+        fails = 0
         while True:
             value, policy_dist = net.forward(state)
             if torch.any(torch.isnan(policy_dist)):
+                fails += 1
+                if fails > self.fail_thresh: raise ValueError
                 print('Manually resetting env...')
                 state = self.env.reset() 
                 state = torch.from_numpy(state).to(device).float().unsqueeze(0)
