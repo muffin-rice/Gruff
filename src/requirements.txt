@@ -1,9 +1,12 @@
 open_spiel
 -f https://download.pytorch.org/whl/torch_stable.html
 torch==1.8.0+cu111
+-f https://download.pytorch.org/whl/torch_stable.html
+torchvision==0.9.0+cu111
 pytorch-lightning
 numpy
 matplotlib
 pandas
 jupyter
 jupyterlab
+gym
