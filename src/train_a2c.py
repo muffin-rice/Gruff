@@ -30,11 +30,11 @@ def main(num_episodes : int, pretrained_model : str):
     
     pl.utilities.seed.seed_everything(seed=0, workers=torch.cuda.is_available())
     
-    model = BridgeActorCritic(pretrained_model, inner_dim=1024)
+    model = BridgeActorCritic(pretrained_model, inner_dim=1024, num_blocks=4)
     
     model_ckpt = ModelCheckpoint(every_n_epochs=100,
                                  save_top_k=-1,
-                                 filename='bridge-a2c-{epoch}')
+                                 filename='bridge-base-a2c-{epoch}')
     
     logger = TensorBoardLogger(logs_dir, 
                                name='a2c')

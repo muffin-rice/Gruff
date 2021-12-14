@@ -58,6 +58,8 @@ class BridgeActorCritic(pl.LightningModule):
             action = metadata['action']
             log_prob = torch.max(dist[action].log(), torch.tensor(1e-8))
             entropy = -(dist.mean() * dist.log()).sum()
+            
+            print(log_prob)
 
             rewards.append(reward)
             values.append(value)
@@ -106,6 +108,8 @@ class BridgeActorCritic(pl.LightningModule):
         advantage = Qvals - values
         actor_loss =  (-log_probs * advantage).mean()
         critic_loss = (0.5 * advantage * advantage).mean()
+        print('aloss', actor_loss)
+        print('closs', critic_loss)
         ac_loss = actor_loss + critic_loss
         
         self.log('loss', ac_loss,
@@ -117,7 +121,7 @@ class BridgeActorCritic(pl.LightningModule):
         return { 'loss': ac_loss }
         
             
-class BridgeCritic(BridgeSupervised): # learns the Value of a given state (discounted total reward)
+class BridgeCritic(BridgeBase): # learns the Value of a given state (discounted total reward)
     def __init__(self, file_dir, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__(input_dim, inner_dim, num_blocks)
         self.load_state_dict(torch.load(file_dir)['state_dict'])
@@ -154,7 +158,7 @@ class BridgeCritic(BridgeSupervised): # learns the Value of a given state (disco
 
         return {'loss' : loss, **metrics}
 
-class BridgeActor(BridgeSupervised): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
+class BridgeActor(BridgeBase): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
 # class BridgeActor(BridgeBase): # learns the optimal policy fn ( optimal f(action, state) = probability(action|state) )
     def __init__(self, file_dir, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__(input_dim, inner_dim, num_blocks)
