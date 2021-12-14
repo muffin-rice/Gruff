@@ -91,7 +91,7 @@ class BridgeBase(pl.LightningModule):
         Outputs one-hot encoding of action.
         Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
         '''
-        x = F.softmax(self.forward_half(x))
+        x = F.softmax(self.forward_half(x), dim=0)
         return x.argmax(dim=1) + MIN_ACTION
 
     def configure_optimizers(self):
@@ -138,7 +138,7 @@ class BridgeSupervised(pl.LightningModule):
         Outputs one-hot encoding of action.
         Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
         '''
-        x = F.softmax(self.forward_half(x))
+        x = F.softmax(self.forward_half(x), dim=0)
         return x.argmax(dim=1) + MIN_ACTION
     
     def configure_optimizers(self):
