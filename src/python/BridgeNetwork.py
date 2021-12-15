@@ -91,6 +91,43 @@ class BridgeSupervised(pl.LightningModule):
         return {'loss' : loss, **metrics}
 
 
+class RFCBackboneWithHandPrediction(RFCBackbone):
+    def forward(self, x):
+        x1 = self.fc1(x)
+        x1 = self.rfc1(x1)
+
+        x1 = self.efc(x1)
+
+        x_modified = torch.cat([x, x1], dim=1)
+
+        x2 = self.fc2(x_modified)
+        x2 = self.rfc2(x2)
+
+        return x2, x1 #return the latent dimension, final predict values come later
+class BridgeSupervisedWithHandPrediction(BridgeSupervised):
+    def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
+        super().__init__()
+        self.inner_dim = inner_dim
+        self.backbone = RFCBackboneWithHandPrediction(input_dim, inner_dim, num_blocks)
+        self.out = nn.Linear(inner_dim, NUM_ACTIONS)
+        self.hand_prediction = nn.Linear(input_dim, 52)
+
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.metrics_fn = lambda yhat,y: {'acc' : (yhat == y).float().mean()}
+        
+        self.save_hyperparameters()
+
+    def forward(self, x):
+        '''
+        Outputs one-hot encoding of action.
+        Use .argmax(dim=1) + MIN_ACTION to get index per minibatch.
+        '''
+        x, x1 = self.backbone(x)
+        x = F.softmax(self.out(x), dim=1)
+        hand_prediction = self.hand_prediction(x1)
+        return x, hand_prediction
+
+
 class BridgeCritic(BridgeSupervised): # learns the Value of a given state (discounted total reward)
     def __init__(self, input_dim = 571, inner_dim = 256, num_blocks=2):
         super().__init__(input_dim, inner_dim, num_blocks)
